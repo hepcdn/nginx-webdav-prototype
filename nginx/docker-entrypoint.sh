@@ -47,6 +47,10 @@ server {
     }
 }
 EOF
+else
+  cat <<EOF >> /etc/nginx/conf.d/site.conf
+error_log stderr warn;
+EOF
 fi
 
 export SSL_CERT_DIR=$SSL_CERT_DIR
