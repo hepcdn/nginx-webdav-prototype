@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from typing import Iterator
+from urllib.parse import parse_qs
 
 import httpx
 import jwt
@@ -17,7 +18,6 @@ import pytest
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from urllib.parse import parse_qs
 
 logger = logging.getLogger()
 
@@ -312,8 +312,8 @@ def setup_cluster(oidc_mock_idp: MockIdP):
     # Set up config files for each server
     for i in range(nservers):
         config = {
-            "server_address": f"http://nginx-webdav-test{i}:{8080 + i}/",
-            "seed_peers": "http://nginx-webdav-test0:8080/" if i > 0 else "",
+            "server_address": f"http://nginx-webdav-test{i}:{8580 + i}/",
+            "seed_peers": "http://nginx-webdav-test0:8580/" if i > 0 else "",
             "openidc_iss": oidc_mock_idp.iss,
             "openidc_pubkey": oidc_mock_idp.public_key_pem,
             "gossip_delay": 1,
@@ -337,7 +337,7 @@ def setup_cluster(oidc_mock_idp: MockIdP):
             "run",
             "-d",
             "-p",
-            f"{8080 + i}:{8080 + i}",
+            f"{8580 + i}:{8580 + i}",
             "--network",
             "nginx-webdav-test",
             "-v",
@@ -347,7 +347,7 @@ def setup_cluster(oidc_mock_idp: MockIdP):
             "-e",
             f"SERVER_NAME=nginx-webdav-test{i}",
             "-e",
-            f"PORT={8080 + i}",
+            f"PORT={8580 + i}",
             "--name",
             f"nginx-webdav-test{i}",
         ]
@@ -355,7 +355,7 @@ def setup_cluster(oidc_mock_idp: MockIdP):
         container_id = subprocess.check_output(podman_cmd).decode().strip()
         container_ids.append(container_id)
 
-    yield [f"http://localhost:{8080 + i}/" for i in range(nservers)]
+    yield [f"http://localhost:{8580 + i}/" for i in range(nservers)]
 
     # Clean up
     for i, container_id in enumerate(container_ids):
