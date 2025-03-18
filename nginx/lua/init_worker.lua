@@ -113,7 +113,7 @@ local function worker_gossip(premature)
     end
 
     local toc = ngx.now()
-    ngx.log(ngx.ERR, "Gossip took ", toc - tic, " seconds")
+    ngx.log(ngx.NOTICE, "Gossip took ", toc - tic, " seconds")
 end
 
 
