@@ -16,7 +16,12 @@ RUN curl -Ol https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz \
     && tar -xzf openresty-${RESTY_VERSION}.tar.gz \
     && cd openresty-${RESTY_VERSION} \
     && patch bundle/nginx-1.27.1/src/event/ngx_event_openssl.c ../set-default-verify-dir.patch \
-    && ./configure --prefix=/usr/local/openresty --with-pcre-jit -j2 \
+    && ./configure \
+        --prefix=/usr/local/openresty \
+        --with-pcre-jit \
+        --with-http_v2_module \
+        --with-http_v3_module \
+        -j2 \
     && make -j2 \
     && make install \
     && cd .. \
@@ -38,7 +43,9 @@ RUN /usr/local/openresty/luajit/bin/luarocks install lua-zlib
 
 FROM docker.io/almalinux:9
 
-RUN yum install -y pcre openssl zlib dnsmasq \
+RUN yum install -y pcre openssl zlib dnsmasq epel-release libuv \
+    && dnf config-manager --set-enabled crb \ 
+    && yum install -y libuv-devel \
     && yum clean all
 
 COPY --from=build /usr/local/openresty /usr/local/openresty
@@ -65,5 +72,5 @@ COPY conf.d /etc/nginx/conf.d
 COPY lua /etc/nginx/lua
 
 COPY docker-entrypoint.sh /
-
+CMD ["nginx", "-g", "daemon off;"]
 ENTRYPOINT ["/docker-entrypoint.sh"]
