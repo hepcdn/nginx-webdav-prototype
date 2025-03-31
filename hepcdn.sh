@@ -24,7 +24,7 @@ while : ; do
 	  --writable-tmpfs \
 	  -B /tmp/hepcdn:/var/www/webdav \
 	  -B /etc/grid-security:/etc/grid-security:ro \
-	  docker://ghcr.io/$hepcdn/nginx-webdav:latest &
+	  docker://ghcr.io/hepcdn/nginx-webdav:latest &
 	PID=$!
 	PGID=$(< /proc/${PID}/stat sed -n '$s/.*) [^ ]* [^ ]* \([^ ]*\).*/\1/p')
 	echo "Container running, PID=$PID, PGID=$PGID"
