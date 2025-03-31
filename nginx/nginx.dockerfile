@@ -38,7 +38,9 @@ RUN /usr/local/openresty/luajit/bin/luarocks install lua-zlib
 
 FROM docker.io/almalinux:9
 
-RUN yum install -y pcre openssl zlib dnsmasq \
+RUN yum install -y pcre openssl zlib dnsmasq epel-release libuv \
+    && dnf config-manager --set-enabled crb \ 
+    && yum install -y libuv-devel \
     && yum clean all
 
 COPY --from=build /usr/local/openresty /usr/local/openresty
@@ -65,5 +67,5 @@ COPY conf.d /etc/nginx/conf.d
 COPY lua /etc/nginx/lua
 
 COPY docker-entrypoint.sh /
-
+CMD ["nginx", "-g", "daemon off;"]
 ENTRYPOINT ["/docker-entrypoint.sh"]
