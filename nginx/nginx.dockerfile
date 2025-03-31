@@ -16,7 +16,12 @@ RUN curl -Ol https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz \
     && tar -xzf openresty-${RESTY_VERSION}.tar.gz \
     && cd openresty-${RESTY_VERSION} \
     && patch bundle/nginx-1.27.1/src/event/ngx_event_openssl.c ../set-default-verify-dir.patch \
-    && ./configure --prefix=/usr/local/openresty --with-pcre-jit -j2 \
+    && ./configure \
+        --prefix=/usr/local/openresty \
+        --with-pcre-jit \
+        --with-http_v2_module \
+        --with-http_v3_module \
+        -j2 \
     && make -j2 \
     && make install \
     && cd .. \
