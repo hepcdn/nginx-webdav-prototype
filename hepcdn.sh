@@ -7,6 +7,7 @@ export SSL_HOST_CERT=/etc/grid-security/hostcert.pem
 export SSL_HOST_KEY=/etc/grid-security/hostkey.pem
 export SERVER_NAME=xrootd-se30-vanderbilt.sites.opensciencegrid.org
 export PORT=1095
+HASH=$(curl https://autocms.accre.vanderbilt.edu/hepcdn-latest)
 
 while : ; do
 	apptainer pull -F docker://ghcr.io/hepcdn/nginx-webdav:latest
@@ -28,9 +29,13 @@ while : ; do
 	PID=$!
 	PGID=$(< /proc/${PID}/stat sed -n '$s/.*) [^ ]* [^ ]* \([^ ]*\).*/\1/p')
 	echo "Container running, PID=$PID, PGID=$PGID"
-	TWELVE_HOURS_IN_15_SEC_INTERVAL=2880
-	EXIT_CODE=-1
-	for (( i=0 ; i<${TWELVE_HOURS_IN_15_SEC_INTERVAL}; ++i )); do
+	while : ; do
+		NEW_HASH=$(curl https://autocms.accre.vanderbilt.edu/hepcdn-latest 2>/dev/null)
+		if [ "$HASH" != "$NEW_HASH" ]; then
+			echo "Image changed, breaking to pull new image"
+			HASH="$NEW_HASH"
+			break
+		fi
 		kill -0 $PID &>/dev/null
 		if [ $? -ne 0 ]; then
 			wait $PID
@@ -38,11 +43,8 @@ while : ; do
 			echo "Container terminated, exit code: ${EXIT_CODE}"
 			break
 		fi
-		sleep 15
+		sleep 60
 	done
-	if [ $EXIT_CODE -eq -1 ]; then
-		echo "Restarting gracefully to pick up new image"
-	fi
 	kill -s QUIT -${PGID}
 	wait $PID
 
