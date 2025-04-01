@@ -137,63 +137,95 @@ def setup_server(oidc_mock_idp: MockIdP):
 
     # Build podman container
     subprocess.check_call(
-        ["podman", "build", "-t", "nginx-webdav", "nginx", "-f", "nginx.dockerfile"]
+        ["podman", "build", "-t", "nginx-webdav", "nginx", "-f", "nginx/nginx.dockerfile"]
     )
 
-    yield
+    # Find an available port. 
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    open_port = 8280
+    for port in range(open_port,open_port+100):
+        try:
+            ret = self.sock.create_connection("localhost", port)
+        except:
+            # People have complaints about bare except, but I don't care
+            open_port = port
+            break
 
-    # Clean up
-    os.remove("nginx/lua/config.json")
-
-
-@pytest.fixture(scope="module")
-def nginx_server(setup_server) -> Iterator[str]:
-    """A running nginx-webdav server for testing
-
-    It's nice to have a module-scoped fixture for the server, so we can
-    reduce the number of irrelevant log messages in the test output.
-    """
     # Start podman container
     podman_cmd = [
         "podman",
         "run",
         "-d",
         "-p",
-        "8080:8080",
+        f"{open_port}:8080",
+        "-v",
+        "./nginx/conf.d:/etc/nginx/conf.d",
+        "-v",
+        "./nginx/lua:/etc/nginx/lua",
         "--tmpfs",
         "/var/www/webdav:rw,size=100M,mode=1777",
+        # Set the name of the container so it will fail early if the old 
+        # container wasn't cleaned up
+        "--name",
+        "nginx-unit-test-container"
     ]
     podman_cmd.append("nginx-webdav")
-    container_id = subprocess.check_output(podman_cmd).decode().strip()
+    try:
+        container_id = subprocess.check_output(podman_cmd).decode().strip()
 
-    subprocess.run(
-        [
-            "podman",
-            "exec",
-            "-i",
-            container_id,
-            "dd",
-            "of=/var/www/webdav/hello.txt",
-        ],
-        input=b"Hello, world!",
-        stderr=subprocess.DEVNULL,
-        check=True,
-    )
+        subprocess.run(
+            [
+                "podman",
+                "exec",
+                "-i",
+                container_id,
+                "dd",
+                "of=/var/www/webdav/hello.txt",
+            ],
+            input=b"Hello, world!",
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
 
-    # Wait for the container to start
-    for _ in range(10):
-        try:
-            time.sleep(0.1)
-            httpx.get("http://localhost:8080/webdav_health/")
-            break
-        except httpx.HTTPError:
-            pass
+        started = False
+        for _ in range(10):
+            try:
+                time.sleep(0.1)
+                r = httpx.get(f"http://localhost:{open_port}/webdav_health")
+                # Make sure the server that responds is the one we started
+                try:
+                    assert(str(config['health_check_id']) in r.text)
+                except AssertionError:
+                    subprocess.check_call(["podman", "logs", container_id])
+                    raise
+                started = True
+                break
+            except httpx.HTTPError as e:
+                print(str(e))
+                continue
+        if not started:
+            subprocess.check_call(["podman", "logs", container_id])
+            raise RuntimeError("Container did not start")
 
-    yield "http://localhost:8080/webdav"
+        yield {"port": open_port, "container_id": container_id}
+    finally:
+        # Stop podman container and clean up
+        subprocess.check_call(["podman", "stop", container_id], stdout=subprocess.DEVNULL)
+        subprocess.check_call(["podman", "rm", container_id], stdout=subprocess.DEVNULL)
+        # Clean up
+        os.remove("nginx/lua/config.json")
 
-    # Dump container logs
-    subprocess.check_call(["podman", "logs", container_id])
 
-    # Stop podman container and clean up
-    subprocess.check_call(["podman", "stop", container_id], stdout=subprocess.DEVNULL)
-    subprocess.check_call(["podman", "rm", container_id], stdout=subprocess.DEVNULL)
+@pytest.fixture()
+def nginx_server(setup_server) -> Iterator[str]:
+    """A running nginx-webdav server for testing
+
+    It's nice to have a module-scoped fixture for the server, so we can
+    reduce the number of irrelevant log messages in the test output.
+    """
+    
+    pre_time = datetime.datetime.now().isoformat()
+    yield f"http://localhost:{setup_server['port']}/webdav"
+
+    subprocess.check_call(["podman", "logs", "--since", pre_time, setup_server['container_id']])
+   
