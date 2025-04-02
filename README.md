@@ -59,7 +59,22 @@ pytest
 
 ## Usage examples
 
-For usage with CMS auth, first, get a valid token, e.g. with [oidc-agent](https://wlcg-authz-wg.github.io/wlcg-authz-docs/token-based-authorization/oidc-agent/). Set it's value to the `$BEARER_TOKEN` environment variable, e.g. with `export BEARER_TOKEN=$(oidc-token tokenname)`.
+For usage with CMS auth, first, get a valid token, e.g. with [oidc-agent](https://wlcg-authz-wg.github.io/wlcg-authz-docs/token-based-authorization/oidc-agent/). Set it's value to the `$BEARER_TOKEN` environment variable, e.g. with `export BEARER_TOKEN=$(oidc-token tokenname)`. You can set up local tokens with the following:
+
+```sh
+dnf install oidc-agent
+eval `oidc-agent` # runs the oidc agent in the background and sets some variables
+oidc-gen cms
+```
+At this point, oidc-gen will ask some questions, choose `https://cms-auth.cern.ch/` as the issuer, and request `openid profile offline_access address storage.read:/` as the scopes. This will write an (encrypted) file to your home directory with the refresh token that can be used in the future.
+
+From here, if you want a token in the future you can run:
+```sh
+eval `oidc-agent`
+export BEARER_TOKEN=$(oidc-token cms)
+```
+to update the BEARER_TOKEN environment variable with your token. Note that this token is short-lived, so you may periodically need to reset the `BEARER_TOKEN` variable.
+
 
 ### Read a file
 
