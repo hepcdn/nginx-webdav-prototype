@@ -9,6 +9,7 @@ local fileutil = require("fileutil")
 ---@return nil
 local function third_party_pull(source_uri, destination_localpath, redirects)
     local httpc = http.new()
+    httpc:set_timeouts(config.data.tpc_connect_timeout, config.data.tpc_send_timeout, config.data.tpc_read_timeout)
 
     -- RequireChecksumVerification is by default true
     -- when false we don't error when the remote server fails to provide
@@ -64,7 +65,7 @@ local function third_party_pull(source_uri, destination_localpath, redirects)
         headers = headers,
     })
     if not res then
-        ngx.say("failure: request to path " .. path .. " failed: " .. err)
+        ngx.say("failure: request to " .. host .. ":" .. port .. " for path " .. path .. " failed: " .. err)
         return ngx.exit(ngx.OK)
     end
 

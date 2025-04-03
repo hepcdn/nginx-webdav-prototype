@@ -12,6 +12,10 @@ local Config = {
         performance_marker_timeout = 5,
 
         -- This is used in webdav_tpc_content
+        -- Timeouts are in milliseconds
+        tpc_connect_timeout = 10000,
+        tpc_send_timeout = 1000,
+        tpc_read_timeout = 30000,
         tpc_redirect_limit = 5,
 
         -- This is used in cksumutil
